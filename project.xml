@@ -13,6 +13,10 @@ namespace PX.PrintCustomerRefund.Ext
 {
     public class ARPaymentEntryExt : PXGraphExtension<ARPaymentEntry>
     {
+        public PXSelect<PaymentMethodAccount,
+                        Where<PaymentMethodAccount.cashAccountID, Equal<Current<ARPayment.cashAccountID>>>,
+                        OrderBy<Asc<PaymentMethodAccount.aPIsDefault>>> CashAcctDetail_AccountID;
+
         public PXSetup<PaymentMethodAccount,
                     Where<PaymentMethodAccount.cashAccountID, Equal<Current<ARPayment.cashAccountID>>,
                     And<PaymentMethodAccount.paymentMethodID, Equal<Current<ARPayment.paymentMethodID>>>>> cashaccountdetail;
