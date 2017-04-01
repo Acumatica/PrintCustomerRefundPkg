@@ -3,7 +3,7 @@
 Acumatica Print Customer Refund Check Customization
 ==================================
 
-###Prerequisites
+### Prerequisites
 * Acumatica 5.0 or higher
 
 Quick Start
