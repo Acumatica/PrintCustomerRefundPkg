@@ -1,4 +1,4 @@
-<Customization level="0" description="">
+<Customization level="0" description="" product-version="17.209">
     <Graph ClassName="ARPaymentEntryExt" Source="#CDATA" IsNew="True" FileType="NewFile">
         <CDATA name="Source"><![CDATA[using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace PX.PrintCustomerRefund.Ext
     {
         public PXSelect<PaymentMethodAccount,
                         Where<PaymentMethodAccount.cashAccountID, Equal<Current<ARPayment.cashAccountID>>>,
-                        OrderBy<Asc<PaymentMethodAccount.aPIsDefault>>> CashAcctDetail_AccountID;
+                        OrderBy<Asc<PaymentMethodAccount.aRIsDefault>>> CashAcctDetail_AccountID;
 
         public PXSetup<PaymentMethodAccount,
                     Where<PaymentMethodAccount.cashAccountID, Equal<Current<ARPayment.cashAccountID>>,
@@ -49,6 +49,31 @@ namespace PX.PrintCustomerRefund.Ext
 
 
             throw new PXRedirectWithReportException(this.Base, requiredException, "Preview");
+        }
+
+        protected virtual void ARPayment_ExtRefNbr_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e, PXFieldDefaulting BaseInvoke)
+        {
+            if (BaseInvoke != null)
+                BaseInvoke(sender, e);
+            ARPayment data = (ARPayment)e.Row;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+            if (data == null || pmRow == null) return;
+            if (!((data.DocType == ARDocType.Refund) && (pmRow.PaymentType == PaymentMethodType.CashOrCheck))) return;
+            e.NewValue = null;
+            e.Cancel = true;
+        }
+
+        protected virtual void ARPayment_ExtRefNbr_FieldVerifying(PXCache sender, PXFieldVerifyingEventArgs e, PXFieldVerifying BaseInvoke)
+        {
+            if (BaseInvoke != null)
+                BaseInvoke(sender, e);
+            ARPayment data = (ARPayment)e.Row;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+
+            if (!(data == null || pmRow == null || String.IsNullOrEmpty(data.ExtRefNbr)) &&
+                (data.DocType == ARDocType.Refund && pmRow.PaymentType == PaymentMethodType.CashOrCheck &&
+                 data.ExtRefNbr.ToUpper() == MessageConst._TOBEGEN.ToUpper()))
+                e.Cancel = true;
         }
 
         protected void ARPayment_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
@@ -92,13 +117,13 @@ namespace PX.PrintCustomerRefund.Ext
                 if ((row.DocType == ARDocType.Refund) && (pmRow.PaymentType == PaymentMethodType.CashOrCheck))
                 {
                     if ((String.IsNullOrEmpty(row.ExtRefNbr) || (row.ExtRefNbr.Trim().ToUpper() == MessageConst._TOBEGEN.ToUpper())) &&
-                       (!String.IsNullOrEmpty(cashaccountdetail.Current.APLastRefNbr)))
+                       (!String.IsNullOrEmpty(cashaccountdetail.Current.ARLastRefNbr)))
                     {
-                        row.ExtRefNbr = PX.Objects.CS.AutoNumberAttribute.NextNumber(cashaccountdetail.Current.APLastRefNbr);
+                        row.ExtRefNbr = PX.Objects.CS.AutoNumberAttribute.NextNumber(cashaccountdetail.Current.ARLastRefNbr);
                         Base.Document.Update(row);
 
                         PaymentMethodAccount det = this.cashaccountdetail.Select();
-                        det.APLastRefNbr = row.ExtRefNbr;
+                        det.ARLastRefNbr = row.ExtRefNbr;
                         this.cashaccountdetail.Update(det);
 
                         Base.Save.Press();
@@ -155,9 +180,13 @@ namespace PX.PrintCustomerRefund.Ext
 {
     public class ARReleaseProcessExt : PXGraphExtension<ARReleaseProcess>
     {
+        public delegate List<ARRegister> ReleaseDocProcBaseDelegate(JournalEntry je, ARRegister ardoc, List<Batch> pmBatchList,
+                                                      ARDocumentRelease.ARMassProcessReleaseTransactionScopeDelegate onreleasecomplete);
+
         [PXOverride]
         public List<ARRegister> ReleaseDocProc(JournalEntry je, ARRegister ardoc, List<Batch> pmBatchList,
-                                                Func<JournalEntry, ARRegister, List<Batch>, List<ARRegister>> del)
+                                                       ARDocumentRelease.ARMassProcessReleaseTransactionScopeDelegate onreleasecomplete,
+                                                       ReleaseDocProcBaseDelegate BaseInvoke)
         {
             if (ardoc is ARPayment)
             {
@@ -168,11 +197,10 @@ namespace PX.PrintCustomerRefund.Ext
                     throw new PXException(MessageConst._CHECK_NOTPRINTED_CANNOTRELEASE);
                 }
             }
-            return del(je, ardoc, pmBatchList);
+            return BaseInvoke(je, ardoc, pmBatchList, onreleasecomplete);
         }
     }
-}
-]]></CDATA>
+}]]></CDATA>
     </Graph>
     <Graph ClassName="Messages" Source="#CDATA" IsNew="True" FileType="NewFile">
         <CDATA name="Source"><![CDATA[using System;
