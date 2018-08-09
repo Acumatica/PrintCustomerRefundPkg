@@ -4,7 +4,7 @@ Acumatica Print Customer Refund Check Customization
 ==================================
 
 ### Prerequisites
-* Acumatica 5.0 or higher
+* Acumatica 2017R2 or higher
 
 Quick Start
 -----------
@@ -24,9 +24,9 @@ To use this customziation:
 ![Screenshot](/_ReadMeImages/AR302000b.png)
 - Such 'Customer Refund' type of Payment with Check type of Payment method can not be released without printing refund check.
 ![Screenshot](/_ReadMeImages/AR302000c.png)
-- New check form for Customer refund (ar640501.rpx report) that is added to the Reports menu of the Payments & Applications screen (AR302000). Format of this new report is same as out-of-box Check Form (AP640500.rpx). You may further customize AR640501.rpx report to achieve desired format of the refund check report.
+- New check form for Customer refund (ar640501.rpx report) is added to the Reports menu of the Payments & Applications screen (AR302000). Format of this new report is same as out-of-box Check Form (AP640500.rpx). You may further customize AR640501.rpx report to achieve desired format of the refund check report.
 ![Screenshot](/_ReadMeImages/AR302000d.png)
-- Clicking on Reports -> Print Refund Check will assign the next check number to 'Payment Ref' and Payment Method (CA204000) -> AP Last Reference Number for matching Cash Account used. And also it will redirect to refund check form report AR640501.rpx.
+- Clicking on Reports -> Print Refund Check will assign the next check number to 'Payment Ref' and Payment Method (CA204000) -> AR Last Reference Number for matching Cash Account used. And also it will redirect to refund check form report AR640501.rpx.
 ![Screenshot](/_ReadMeImages/AR302000e.png)
 - There is no batch printing capability of refund checks.
 
