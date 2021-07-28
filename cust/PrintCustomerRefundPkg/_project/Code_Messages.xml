@@ -1,0 +1,25 @@
+﻿<Graph ClassName="Messages" Source="#CDATA" IsNew="True" FileType="NewFile">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data.BQL;
+
+namespace PX.PrintCustomerRefund.Ext
+{
+    public static class MessageConst
+    {
+        public const string _TOBEGEN = "To Be Generated";
+        public const string _CHECK_NOTPRINTED_CANNOTRELEASE = "Refund Check is not Printed and cannot be released.";
+        public const string APRefundReport = "AR640501";
+        public class toBeGenerated : BqlString.Constant<toBeGenerated>
+        {
+            public toBeGenerated() : base(_TOBEGEN)
+            {
+
+            }
+        }
+    }
+}
+]]></CDATA>
+</Graph>

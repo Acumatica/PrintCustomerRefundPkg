@@ -1,0 +1,33 @@
+﻿<Graph ClassName="ARPaymentExt" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.CA;
+
+namespace PX.PrintCustomerRefund.Ext
+{
+    public class ARPaymentExt : PXCacheExtension<ARPayment>
+    {
+        #region AmountToWords
+        public abstract class amountToWords : IBqlField { }
+        protected string _AmountToWords;
+        [PX.Objects.AP.ToWords(typeof(ARPayment.curyOrigDocAmt))]
+        public virtual string AmountToWords
+        {
+            get
+            {
+                return this._AmountToWords;
+            }
+            set
+            {
+                this._AmountToWords = value;
+            }
+        }
+        #endregion
+    }
+}
+]]></CDATA>
+</Graph>

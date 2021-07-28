@@ -1,0 +1,147 @@
+﻿<Graph ClassName="CustomerRefundMassPrint" Source="#CDATA" IsNew="True" FileType="NewGraph">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Data.BQL;
+using PX.Data.BQL.Fluent;
+using PX.Objects.AR;
+using PX.Objects.CA;
+using PX.Objects.CS;
+using PX.Objects.GL;
+
+
+namespace PX.PrintCustomerRefund.Ext
+{
+	public class CustomerRefundMassPrint : PXGraph<CustomerRefundMassPrint>
+	{
+		public PXCancel<CustomerRefundFilter> Cancel;
+
+		public PXFilter<CustomerRefundFilter> Filter;
+		public PXFilteredProcessing<ARPayment, CustomerRefundFilter, Where<ARPayment.docType, Equal<ARDocType.refund>, And<ARPayment.extRefNbr, Equal<MessageConst.toBeGenerated>>>> Refunds;
+        public PXSetup<PaymentMethodAccount>.Where<PaymentMethodAccount.paymentMethodID.IsEqual<CustomerRefundFilter.paymentMethodID.FromCurrent>.And<PaymentMethodAccount.cashAccountID.IsEqual<CustomerRefundFilter.cashAccountID.FromCurrent>>> cashAcct;
+
+		protected IEnumerable refunds()
+        {
+            var select = new PXSelect<ARPayment, Where<ARPayment.docType, Equal<ARDocType.refund>, And<ARPayment.extRefNbr, Equal<MessageConst.toBeGenerated>>>>(this);
+            
+			// Filter here
+            if (!string.IsNullOrWhiteSpace(Filter.Current.PaymentMethodID))
+            {
+               
+                select.WhereAnd<Where<ARPayment.paymentMethodID, Equal<Required<ARPayment.paymentMethodID>>>>();
+            }
+            else
+            {
+                return Enumerable.Empty<object>();
+            }
+
+            if (Filter.Current.CashAccountID.HasValue)
+            {
+                select.WhereAnd<Where<ARPayment.cashAccountID, Equal<Required<ARPayment.cashAccountID>>>>();
+            }
+            else
+            {
+                return Enumerable.Empty<object>();
+            }
+
+
+	      return select.Select(Filter.Current.PaymentMethodID, Filter.Current.CashAccountID);
+        }
+
+		[Serializable]
+		[PXHidden]
+		public class CustomerRefundFilter : IBqlTable
+		{
+			public abstract class branchID : PX.Data.BQL.BqlInt.Field<branchID> { }
+		    [Branch()]
+		    public Int32? BranchID {get;set;}
+
+            public abstract class paymentMethodID : PX.Data.BQL.BqlString.Field<paymentMethodID> { }
+		    [PXDBString(10, IsUnicode = true)]
+		    [PXSelector(typeof(Search<PaymentMethod.paymentMethodID, 
+		    		Where<PaymentMethod.paymentType, Equal<PaymentMethodType.cashOrCheck>, And<PaymentMethod.useForAR, Equal<True>>>>), DescriptionField = typeof(PaymentMethod.descr))]
+		    [PXUIField(DisplayName = "Payment Method")]
+		    public virtual String PaymentMethodID { get; set; }
+
+		    public abstract class cashAccountID : PX.Data.BQL.BqlInt.Field<cashAccountID> { }
+		    [CashAccount(typeof(CustomerRefundFilter.branchID), typeof(Search2<CashAccount.cashAccountID, 
+		    		InnerJoin<PaymentMethodAccount, On<PaymentMethodAccount.cashAccountID, Equal<CashAccount.cashAccountID>,
+		    			And<PaymentMethodAccount.paymentMethodID, Equal<Current2<CustomerRefundFilter.paymentMethodID>>,
+		    			And<PaymentMethodAccount.useForAR,Equal<True>>>>>>), Visibility = PXUIVisibility.Visible)]
+		    public virtual Int32? CashAccountID{ get; set; }
+
+            [PXDBString(10)]
+            [PXUIField(DisplayName = "Last Check Nbr.", Enabled = false)]
+            public virtual string LastCheckNbr {get;set;}
+            public abstract class lastCheckNbr : BqlString.Field<lastCheckNbr> { }
+		}
+		
+        protected void _(Events.RowUpdated<CustomerRefundFilter> e)
+        {
+            if (e.Row is null) return;
+            if (e.Cache.ObjectsEqual<CustomerRefundFilter.paymentMethodID, CustomerRefundFilter.cashAccountID>(e.Row, e.OldRow)) return;
+
+            PaymentMethodAccount acctInfo = 
+                SelectFrom<PaymentMethodAccount>
+                .Where<PaymentMethodAccount.paymentMethodID.IsEqual<@P.AsString>
+                .And<PaymentMethodAccount.cashAccountID.IsEqual<@P.AsInt>>>
+                .View.Select(this, e.Row.PaymentMethodID, e.Row.CashAccountID);
+			if (acctInfo is null) return;
+            
+            string lastNbr = acctInfo.GetExtension<PX.PrintCustomerRefund.Ext.PaymentMethodExt>().UsrUseAPReferenceNbrForArRefund.GetValueOrDefault() ? acctInfo.APLastRefNbr : acctInfo.ARLastRefNbr;
+            e.Row.LastCheckNbr = lastNbr;
+        }
+
+        public CustomerRefundMassPrint()
+        {
+            string lastNbr = Filter.Current.LastCheckNbr;
+            Refunds.SetProcessDelegate(
+                (List<ARPayment> payments)=>
+                {
+                    var graph = PXGraph.CreateInstance<ARPaymentEntry>();
+                    SetCheckNbrs(payments, graph);
+
+					GenerateCombinedReport(payments, lastNbr, graph);	
+                });
+        }
+
+        private static void SetCheckNbrs(List<ARPayment> payments, ARPaymentEntry graph)
+        {
+            foreach (var item in payments)
+            {
+                PXProcessing<ARPayment>.SetCurrentItem(item);
+                try
+                {
+    				graph.Document.Current = item;
+				    var ext = graph.GetExtension<PX.PrintCustomerRefund.Ext.ARPaymentEntryExt>();
+				    ext.AssignCheckNumber();
+                    PXProcessing<ARPayment>.SetProcessed();
+                }
+                catch(Exception e)
+                {
+                    PXProcessing<ARPayment>.SetError(e);
+                }
+            }
+        }
+
+		private static void GenerateCombinedReport(List<ARPayment> payments, string lastNbr, ARPaymentEntry graph)
+        {
+            var lastPayment = payments.Last();
+            Dictionary<string, string> d = new Dictionary<string, string>()
+            {
+                ["StartCheckNbr"] = lastNbr,
+                ["EndCheckNbr"] = AutoNumberAttribute.NextNumber(lastPayment.ExtRefNbr),
+                ["PaymentMethodID"] = lastPayment.PaymentMethodID,
+                ["CashAccountID"] = CashAccount.PK.Find(graph, lastPayment.CashAccountID).CashAccountCD,
+                [PX.Objects.AP.ReportMessages.CheckReportFlag] = PX.Objects.AP.ReportMessages.CheckReportFlagValue
+            };
+
+            throw new PXReportRequiredException(d, "AR640501", PXBaseRedirectException.WindowMode.New, "Refund Check");
+			//throw new PXRedirectWithReportException(graph, requiredException, "Preview");
+        }
+	}
+}]]></CDATA>
+</Graph>
