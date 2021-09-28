@@ -28,7 +28,12 @@ To use this customziation:
 ![Screenshot](/_ReadMeImages/AR302000d.png)
 - Clicking on Reports -> Print Refund Check will assign the next check number to 'Payment Ref' and Payment Method (CA204000) -> AR Last Reference Number for matching Cash Account used. And also it will redirect to refund check form report AR640501.rpx.
 ![Screenshot](/_ReadMeImages/AR302000e.png)
-- There is no batch printing capability of refund checks.
+- If you want to use the AP Check numbering sequence for customer refunds, check "Use AP Reference Nbr for AR"
+![Screenshot](/_ReadMeImages/AR302000f.png)
+- If you want to print multiple checks at once, navigate to AR508800 "Print customer Refunds"
+![Screenshot](/_ReadMeImages/AR508800a.png)
+- After clicking "Process", the selected checks will be displayed in the report browser
+![Screenshot](/_ReadMeImages/AR508800b.png)
 
 Known Issues
 ------------

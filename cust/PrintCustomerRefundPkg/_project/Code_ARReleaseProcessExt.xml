@@ -1,0 +1,37 @@
+﻿<Graph ClassName="ARReleaseProcessExt" Source="#CDATA" IsNew="True" FileType="NewFile">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.GL;
+
+namespace PX.PrintCustomerRefund.Ext
+{
+    public class ARReleaseProcessExt : PXGraphExtension<ARReleaseProcess>
+    {
+        public delegate List<ARRegister> ReleaseDocProcBaseDelegate(JournalEntry je, ARRegister ardoc, List<Batch> pmBatchList,
+                                                      ARDocumentRelease.ARMassProcessReleaseTransactionScopeDelegate onreleasecomplete);
+
+        [PXOverride]
+        public List<ARRegister> ReleaseDocProc(JournalEntry je, ARRegister ardoc, List<Batch> pmBatchList,
+                                                       ARDocumentRelease.ARMassProcessReleaseTransactionScopeDelegate onreleasecomplete,
+                                                       ReleaseDocProcBaseDelegate BaseInvoke)
+        {
+            if (ardoc is ARPayment)
+            {
+                ARPayment currentPayment = ardoc as ARPayment;
+                if (currentPayment.DocType == ARDocType.Refund 
+                    && (String.IsNullOrEmpty(currentPayment.ExtRefNbr) 
+                    || currentPayment.ExtRefNbr.Trim().ToUpper() == MessageConst._TOBEGEN.ToUpper())
+                    )
+                {
+                    throw new PXException(MessageConst._CHECK_NOTPRINTED_CANNOTRELEASE);
+                }
+            }
+            return BaseInvoke(je, ardoc, pmBatchList, onreleasecomplete);
+        }
+    }
+}]]></CDATA>
+</Graph>

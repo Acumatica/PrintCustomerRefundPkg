@@ -1,0 +1,26 @@
+﻿<Graph ClassName="PaymentMethodAccount" Source="#CDATA" IsNew="True" FileType="NewFile">
+    <CDATA name="Source"><![CDATA[using PX.Api;
+using PX.Data.EP;
+using PX.Data.ReferentialIntegrity.Attributes;
+using PX.Data;
+using PX.Objects.CA;
+using PX.Objects.CS;
+using PX.Objects;
+using PX.SM;
+using System.Collections.Generic;
+using System;
+
+namespace PX.PrintCustomerRefund.Ext
+{
+  public class PaymentMethodExt : PXCacheExtension<PaymentMethodAccount>
+  {
+    #region UsrUseAPReferenceNbrForArRefund
+    [PXDBBool]
+    [PXDefault(false, PersistingCheck = PXPersistingCheck.Nothing)]
+    [PXUIField(DisplayName="Use AP Reference Nbr for AR")]
+    public virtual bool? UsrUseAPReferenceNbrForArRefund { get; set; }
+    public abstract class usrUseAPReferenceNbrForArRefund : PX.Data.BQL.BqlBool.Field<usrUseAPReferenceNbrForArRefund> { }
+    #endregion
+  }
+}]]></CDATA>
+</Graph>

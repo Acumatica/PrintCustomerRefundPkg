@@ -1,0 +1,153 @@
+﻿<Graph ClassName="ARPaymentEntryExt" Source="#CDATA" IsNew="True" FileType="NewFile">
+    <CDATA name="Source"><![CDATA[using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using PX.Data;
+using PX.Objects.AR;
+using PX.Objects.CA;
+using PX.Objects.CS;
+using System.Collections;
+
+namespace PX.PrintCustomerRefund.Ext
+{
+    // Acuminator disable once PX1016 ExtensionDoesNotDeclareIsActiveMethod extension should be constantly active
+    public class ARPaymentEntryExt : PXGraphExtension<ARPaymentEntry>
+    {
+        public PXSelect<PaymentMethodAccount,
+                        Where<PaymentMethodAccount.cashAccountID, Equal<Current<ARPayment.cashAccountID>>>,
+                        OrderBy<Asc<PaymentMethodAccount.aRIsDefault>>> CashAcctDetail_AccountID;
+
+        public PXSelect<PaymentMethodAccount, Where<
+                    Where<PaymentMethodAccount.cashAccountID, Equal<Current<ARPayment.cashAccountID>>,
+                    And<PaymentMethodAccount.paymentMethodID, Equal<Current<ARPayment.paymentMethodID>>>>>> cashaccountdetail;
+
+        public override void Initialize()
+        {
+            Base.report.AddMenuAction(printRefundCheck);
+            printRefundCheck.SetEnabled(false);
+        }
+
+        public PXAction<ARPayment> printRefundCheck;
+        [PXButton()]
+        [PXUIField(DisplayName = "Print Refund Check", MapEnableRights = PXCacheRights.Select, MapViewRights = PXCacheRights.Select)]
+        protected virtual void PrintRefundCheck()
+        {
+            AssignCheckNumber();
+
+            Dictionary<string, string> d = new Dictionary<string, string>()
+            {
+                ["StartCheckNbr"] = Base.Document.Current.ExtRefNbr,
+                ["PaymentMethodID"] = Base.Document.Current.PaymentMethodID,
+                ["CashAccountID"] = CashAccount.PK.Find(Base, Base.Document.Current.CashAccountID).CashAccountCD,
+                [PX.Objects.AP.ReportMessages.CheckReportFlag] = PX.Objects.AP.ReportMessages.CheckReportFlagValue
+            };
+
+            var requiredException = new PXReportRequiredException(d, "AR640501", PXBaseRedirectException.WindowMode.New, "Refund Check");
+
+
+            throw new PXRedirectWithReportException(this.Base, requiredException, "Preview");
+        }
+
+        protected virtual void ARPayment_ExtRefNbr_FieldDefaulting(PXCache sender, PXFieldDefaultingEventArgs e, PXFieldDefaulting BaseInvoke)
+        {
+            if (BaseInvoke != null)
+                BaseInvoke(sender, e);
+            ARPayment data = (ARPayment)e.Row;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+            if (data == null || pmRow == null) return;
+            if (!(data.DocType == ARDocType.Refund
+              && pmRow.PaymentType == PaymentMethodType.CashOrCheck)) return;
+            e.NewValue = null;
+            e.Cancel = true;
+        }
+
+        protected virtual void ARPayment_ExtRefNbr_FieldVerifying(PXCache sender, PXFieldVerifyingEventArgs e, PXFieldVerifying BaseInvoke)
+        {
+            if (BaseInvoke != null)
+                BaseInvoke(sender, e);
+            ARPayment data = (ARPayment)e.Row;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+
+            if (
+                !(data == null 
+                || pmRow == null 
+                || String.IsNullOrEmpty(data.ExtRefNbr))
+                && (
+                data.DocType == ARDocType.Refund 
+                && pmRow.PaymentType == PaymentMethodType.CashOrCheck 
+                && data.ExtRefNbr.ToUpper() == MessageConst._TOBEGEN.ToUpper()
+                ))
+                e.Cancel = true;
+        }
+
+        protected void ARPayment_RowSelected(PXCache sender, PXRowSelectedEventArgs e)
+        {
+            ARPayment row = e.Row as ARPayment;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+            if (row == null || pmRow == null) return;
+
+            bool bPrint = ((row.DocType == ARDocType.Refund) && (pmRow.PaymentType == PaymentMethodType.CashOrCheck));
+            printRefundCheck.SetEnabled(bPrint && !row.Released.Value && !row.Hold.Value);
+            PXUIFieldAttribute.SetEnabled<ARPayment.extRefNbr>(sender, row, !bPrint);
+        }
+
+        protected virtual void ARPayment_RowPersisting(PXCache sender, PXRowPersistingEventArgs e, PXRowPersisting del)
+        {
+            ARPayment row = e.Row as ARPayment;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+            if (row == null || pmRow == null) return;
+
+            if ((row.DocType == ARDocType.Refund) &&
+                (pmRow.PaymentType == PaymentMethodType.CashOrCheck) &&
+                (String.IsNullOrEmpty(row.ExtRefNbr)))
+            {
+                row.ExtRefNbr = MessageConst._TOBEGEN;
+            }
+
+            if (del != null)
+                del(sender, e);
+        }
+
+        public void AssignCheckNumber()
+        {
+            ARPayment row = Base.Document.Current;
+            PaymentMethod pmRow = Base.paymentmethod.Current;
+
+            if (row != null && pmRow != null)
+            {
+                if ((row.DocType == ARDocType.Refund) && (pmRow.PaymentType == PaymentMethodType.CashOrCheck))
+                {
+                    cashaccountdetail.Cache.ClearQueryCache();
+                    PaymentMethodAccount det = this.cashaccountdetail.Select();
+                    bool useAp = det.GetExtension<PaymentMethodExt>().UsrUseAPReferenceNbrForArRefund.GetValueOrDefault();
+                    string lastRefNbr = useAp ? det.APLastRefNbr : det.ARLastRefNbr;
+
+                    if ((String.IsNullOrEmpty(row.ExtRefNbr) 
+                        || (row.ExtRefNbr.Trim().ToUpper() == MessageConst._TOBEGEN.ToUpper())) 
+                        && (!String.IsNullOrEmpty(lastRefNbr)))
+                    {
+                        row.ExtRefNbr = AutoNumberAttribute.NextNumber(lastRefNbr);
+                        Base.Document.Update(row);
+
+                        if (useAp)
+                        {
+                            det.APLastRefNbr = row.ExtRefNbr;
+                        }
+                        else
+                        {
+                            det.ARLastRefNbr = row.ExtRefNbr;
+                        }
+                        this.cashaccountdetail.Update(det);
+
+                        row.Status = ARDocStatus.Open;
+                        Base.Document.Update(row);
+
+                        Base.Actions.PressSave();
+                    }
+                }
+            }
+        }
+    }
+}]]></CDATA>
+</Graph>
