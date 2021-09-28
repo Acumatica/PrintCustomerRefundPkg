@@ -77,6 +77,11 @@ namespace PX.PrintCustomerRefund.Ext
             [PXUIField(DisplayName = "Last Check Nbr.", Enabled = false)]
             public virtual string LastCheckNbr {get;set;}
             public abstract class lastCheckNbr : BqlString.Field<lastCheckNbr> { }
+
+            [PXDBBool()]
+            [PXUIField(DisplayName = "Set Check Application Date to Today")]
+            public virtual bool? SetApplicationDate {get;set;}
+            public abstract class setApplicationDate : BqlBool.Field<setApplicationDate> { }
 		}
 		
         protected void _(Events.RowUpdated<CustomerRefundFilter> e)
@@ -98,20 +103,23 @@ namespace PX.PrintCustomerRefund.Ext
         public CustomerRefundMassPrint()
         {
             string lastNbr = Filter.Current.LastCheckNbr;
+            bool setAppDate = Filter.Current.SetApplicationDate.GetValueOrDefault();
             Refunds.SetProcessDelegate(
                 (List<ARPayment> payments)=>
                 {
                     var graph = PXGraph.CreateInstance<ARPaymentEntry>();
-                    SetCheckNbrs(payments, graph);
-
+                    SetCheckNbrs(payments, graph, setAppDate);
 					GenerateCombinedReport(payments, lastNbr, graph);	
                 });
         }
 
-        private static void SetCheckNbrs(List<ARPayment> payments, ARPaymentEntry graph)
+        private static void SetCheckNbrs(List<ARPayment> payments, ARPaymentEntry graph, bool setApplicationDate)
         {
             foreach (var item in payments)
             {
+                if (setApplicationDate) 
+                    item.AdjDate = graph.Accessinfo.BusinessDate;
+
                 PXProcessing<ARPayment>.SetCurrentItem(item);
                 try
                 {

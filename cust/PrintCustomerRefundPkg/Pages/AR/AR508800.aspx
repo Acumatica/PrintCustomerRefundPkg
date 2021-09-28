@@ -11,15 +11,18 @@
     </px:PXDataSource>
 </asp:Content>
 <asp:Content ID="cont2" ContentPlaceHolderID="phF" Runat="Server">
-    <px:PXFormView ID="form" runat="server" DataSourceID="ds" DataMember="Filter" Width="100%" Height="100px" AllowAutoHide="false">
+    <px:PXFormView ID="form" runat="server" DataSourceID="ds" DataMember="Filter" Width="100%" AllowAutoHide="false">
         <Template>
             <px:PXLayoutRule runat="server" StartRow="True"/>
             <px:PXSelector runat="server" ID="slBranchID" DataField="BranchID" CommitChanges="True"/>
             <px:PXSelector runat="server" ID="slPaymentMethodID" DataField="PaymentMethodID" CommitChanges="True"  AutoRefresh="True"/>
             <px:PXSelector runat="server" ID="slCashAccountID" DataField="CashAccountID" CommitChanges="True" AutoRefresh="True"/>
-            <px:PXTextEdit runat="server" ID="txtLastCheckNbr" DataField="LastCheckNbr"/>
+            <px:PXTextEdit runat="server" ID="txtLastCheckNbr" DataField="LastCheckNbr" CommitChanges="True"/>
+
+            <px:PXLayoutRule runat="server" StartColumn="True"/>
+            <px:PXCheckBox runat="server" ID="chkSetApplicationDate" DataField="SetApplicationDate" CommitChanges="True"/>
         </Template>
-<AutoSize Enabled="True" Container="Window" />
+        <AutoSize Enabled="true" Container="Window" />
     </px:PXFormView>
 </asp:Content>
 <asp:Content ID="cont3" ContentPlaceHolderID="phG" Runat="Server">

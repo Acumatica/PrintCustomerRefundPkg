@@ -25,8 +25,21 @@
         </layout>
         <data>
             <SiteMap>
-                <row Position="5963" Title="Process Customer Refunds" Url="~/Pages/AR/AR508800.aspx" ScreenID="AR508800" NodeID="71d7b175-ddfb-4080-b8e0-0c2ce0856f01" ParentID="00000000-0000-0000-0000-000000000000" />
+                <row Position="5963" Title="Process Customer Refunds" Url="~/Pages/AR/AR508800.aspx" ScreenID="AR508800" NodeID="71d7b175-ddfb-4080-b8e0-0c2ce0856f01" ParentID="00000000-0000-0000-0000-000000000000">
+                    <MUIScreen IsPortal="0" WorkspaceID="d5cbc4c3-5f8b-40da-80c9-49897f1f74b8" Order="180" SubcategoryID="32130442-2305-4394-9389-cf915b191d2a" />
+                </row>
             </SiteMap>
+            <MUIWorkspace>
+                <row IsPortal="0" WorkspaceID="d5cbc4c3-5f8b-40da-80c9-49897f1f74b8" Order="147" Title="Receivables" Icon="add_circle" AreaID="338edf81-5456-4735-8601-b213458e93fe" ScreenID="WSAR0000" IsSystem="0">
+                    <MUIFavoriteWorkspace IsPortal="0" Username="" IsFavorite="1" />
+                </row>
+            </MUIWorkspace>
+            <MUISubcategory>
+                <row IsPortal="0" SubcategoryID="32130442-2305-4394-9389-cf915b191d2a" Order="820" Name="Processes" Icon="" IsSystem="0" />
+            </MUISubcategory>
+            <MUIArea>
+                <row IsPortal="0" AreaID="338edf81-5456-4735-8601-b213458e93fe" Order="10" Name="Financials" />
+            </MUIArea>
         </data>
     </data-set>
 </SiteMapNode>
